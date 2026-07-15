@@ -53,6 +53,7 @@ const database = client.db(process.env.AUTH_DB_NAME);
 const productsCollection = database.collection("products");
 const cartsCollection = database.collection("carts");
 const ordersCollection = database.collection("orders");
+const usersCollection = database.collection("user");
 
 /**
  * ========================================================
@@ -292,7 +293,7 @@ app.put("/api/products/:id", verifyToken, async (req: CustomRequest, res: Respon
 
 
 // 🎯 ১. নির্দিষ্ট প্রোডাক্টের ডিটেইলস এবং রিলেটেড প্রোডাক্ট নিয়ে আসার রুট
-app.get("/api/products/:id", async (req: Request, res: Response) => {
+app.get("/api/products/:id/edit", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -325,6 +326,137 @@ app.get("/api/products/:id", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Fetch Single Product Error:", error);
     res.status(500).json({ success: false, message: "Internal Server Error." });
+  }
+});
+
+
+// 👥 ১. সব ইউজারের লিস্ট গেট করার রুট (GET)
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    // তোমার ডাটাবেজের ইউজার কালেকশন থেকে সব ডাটা রিড করা
+    const users = await usersCollection.find({}).toArray(); 
+    
+    // ম্যাপ করে ডাটা ফরম্যাট ঠিক করা (যাতে ফ্রন্টএন্ডের id, name, email এর সাথে মিলে যায়)
+    const formattedUsers = users.map((user) => ({
+      id: user._id.toString(),
+      name: user.name || "Unknown Operator",
+      email: user.email,
+      role: user.role || "buyer",
+      status: user.status || "active",
+    }));
+
+    res.status(200).send({
+      success: true,
+      data: formattedUsers,
+    });
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    res.status(500).send({ success: false, message: "Internal server error" });
+  }
+});
+
+// ⚡ ২. ইউজারের রোল আপডেট করার রুট (PATCH)
+app.patch("/api/admin/users/:id/role", async (req: any, res: any) => {
+  try {
+    const userId = req.params.id;
+    const { role } = req.body;
+
+    // 🌟 আইডি ভ্যালিড কিনা চেক করে নেওয়া (নাহলে ObjectId ক্র্যাশ করতে পারে)
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).send({ success: false, message: "Invalid User ID format" });
+    }
+
+    const filter = { _id: new ObjectId(userId) };
+    const updateDoc = {
+      $set: { role: role },
+    };
+
+    const result = await usersCollection.updateOne(filter, updateDoc);
+
+    if (result.modifiedCount > 0) {
+      res.status(200).send({ success: true, message: "Role updated successfully" });
+    } else {
+      res.status(400).send({ success: false, message: "Failed to update or no changes made" });
+    }
+  } catch (error) {
+    console.error("Failed to update role:", error);
+    res.status(500).send({ success: false, message: "Internal server error" });
+  }
+});
+
+
+// ⚡ ৩. ইউজারের স্ট্যাটাস (Active/Suspended) আপডেট করার রুট (PATCH)
+app.patch("/api/admin/users/:id/status",verifyToken, async (req: any, res: any) => {
+  try {
+    const userId = req.params.id;
+    const { status } = req.body; // ফ্রন্টএন্ড থেকে পাঠানো nextStatus
+
+    // আইডি ভ্যালিড কিনা চেক করা
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).send({ success: false, message: "Invalid User ID format" });
+    }
+
+    const filter = { _id: new ObjectId(userId) };
+    const updateDoc = {
+      $set: { status: status }, // ডাটাবেজে status ফিল্ড সেট বা আপডেট হবে
+    };
+
+    const result = await usersCollection.updateOne(filter, updateDoc);
+
+    // modifiedCount > 0 মানে নতুন মান বসেছে
+    // upsertedCount বা matchedCount চেক করতে পারো যদি অলরেডি একই মান থাকে
+    if (result.matchedCount > 0) {
+      res.status(200).send({ success: true, message: "Status updated successfully" });
+    } else {
+      res.status(400).send({ success: false, message: "Failed to update status" });
+    }
+  } catch (error) {
+    console.error("Failed to update status:", error);
+    res.status(500).send({ success: false, message: "Internal server error" });
+  }
+});
+
+// 📋 ১. সব প্রোডাক্ট রিড করার রুট (Admin Access)
+app.get("/api/admin/products",verifyToken, async (req, res) => {
+  try {
+    const products = await productsCollection.find({}).toArray(); 
+    
+    const formattedProducts = products.map((prod) => ({
+      id: prod._id.toString(),
+      title: prod.title || prod.name || "Untitled Product",
+      price: prod.price || 0,
+      category: prod.category || "Uncategorized",
+      sellerEmail: prod.sellerEmail || "Unknown Seller",
+      image: prod.image || "https://placehold.co/600x400",
+      status: prod.status || "approved", // approved, pending, suspended
+    }));
+
+    res.status(200).send({ success: true, data: formattedProducts });
+  } catch (error) {
+    console.error("Failed to fetch products:", error);
+    res.status(500).send({ success: false, message: "Internal server error" });
+  }
+});
+
+// ❌ ২. এডমিন কর্তৃক প্রোডাক্ট ডিলিট করার রুট (DELETE)
+app.delete("/api/admin/products/:id",verifyToken, async (req: any, res: any) => {
+  try {
+    const prodId = req.params.id;
+
+    if (!ObjectId.isValid(prodId)) {
+      return res.status(400).send({ success: false, message: "Invalid Product ID format" });
+    }
+
+    const result = await productsCollection.deleteOne({ _id: new ObjectId(prodId) });
+
+    if (result.deletedCount > 0) {
+      res.status(200).send({ success: true, message: "Product purged successfully from Grid" });
+    } else {
+      res.status(404).send({ success: false, message: "Product not found" });
+    }
+  } catch (error) {
+    console.error("Failed to delete product:", error);
+    res.status(500).send({ success: false, message: "Internal server error" });
   }
 });
 
