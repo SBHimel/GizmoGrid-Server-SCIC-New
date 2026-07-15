@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "nodemon",
-  "build": "tsc"
-},
+    "dev": "nodemon",
+    "build": "tsc"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -24,6 +24,6 @@
     "@types/node": "^26.1.1",
     "nodemon": "^3.1.14",
     "tsx": "^4.23.1",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.2"
   }
 }

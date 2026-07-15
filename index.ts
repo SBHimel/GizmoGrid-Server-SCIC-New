@@ -211,7 +211,7 @@ app.get("/api/seller/products", verifyToken, async (req: CustomRequest, res: Res
 // 🗑️ প্রোডাক্ট ডিলিট করার Secure API
 app.delete("/api/products/:id", verifyToken, async (req: CustomRequest, res: Response) => {
   try {
-    const productId = req.params.id;
+    const productId = req.params.id as string as string as string;
     const sellerId = req.user?.id;
 
     // নিশ্চিত হওয়া যে এই প্রোডাক্টটি আসলেই এই সেলারের কি না
@@ -242,7 +242,7 @@ app.delete("/api/products/:id", verifyToken, async (req: CustomRequest, res: Res
 // 🔍 ১. নির্দিষ্ট একটি প্রোডাক্টের ডাটা আইডি দিয়ে খুঁজে বের করা (For Edit Form Initialization)
 app.get("/api/products/:id", verifyToken, async (req: Request, res: Response) => {
   try {
-    const productId = req.params.id;
+    const productId = req.params.id as string as string as string;
     const product = await productsCollection.findOne({ _id: new ObjectId(productId) });
 
     if (!product) {
@@ -259,7 +259,7 @@ app.get("/api/products/:id", verifyToken, async (req: Request, res: Response) =>
 // 🔄 ২. প্রোডাক্টের তথ্য আপডেট করার Secure API
 app.put("/api/products/:id", verifyToken, async (req: CustomRequest, res: Response) => {
   try {
-    const productId = req.params.id;
+    const productId = req.params.id as string as string as string;
     const sellerId = req.user?.id;
     const updatedData = req.body; // ফ্রন্টএন্ড থেকে পাঠানো নতুন ডেটা
 
@@ -295,7 +295,7 @@ app.put("/api/products/:id", verifyToken, async (req: CustomRequest, res: Respon
 // 🎯 ১. নির্দিষ্ট প্রোডাক্টের ডিটেইলস এবং রিলেটেড প্রোডাক্ট নিয়ে আসার রুট
 app.get("/api/products/:id/edit", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // আইডি ভ্যালিডেশন
     if (!ObjectId.isValid(id)) {
@@ -358,7 +358,7 @@ app.get("/api/admin/users", async (req, res) => {
 // ⚡ ২. ইউজারের রোল আপডেট করার রুট (PATCH)
 app.patch("/api/admin/users/:id/role", async (req: any, res: any) => {
   try {
-    const userId = req.params.id;
+    const userId = req.params.id as string as string;
     const { role } = req.body;
 
     // 🌟 আইডি ভ্যালিড কিনা চেক করে নেওয়া (নাহলে ObjectId ক্র্যাশ করতে পারে)
@@ -388,7 +388,7 @@ app.patch("/api/admin/users/:id/role", async (req: any, res: any) => {
 // ⚡ ৩. ইউজারের স্ট্যাটাস (Active/Suspended) আপডেট করার রুট (PATCH)
 app.patch("/api/admin/users/:id/status",verifyToken, async (req: any, res: any) => {
   try {
-    const userId = req.params.id;
+    const userId = req.params.id as string as string;
     const { status } = req.body; // ফ্রন্টএন্ড থেকে পাঠানো nextStatus
 
     // আইডি ভ্যালিড কিনা চেক করা
@@ -441,7 +441,7 @@ app.get("/api/admin/products",verifyToken, async (req, res) => {
 // ❌ ২. এডমিন কর্তৃক প্রোডাক্ট ডিলিট করার রুট (DELETE)
 app.delete("/api/admin/products/:id",verifyToken, async (req: any, res: any) => {
   try {
-    const prodId = req.params.id;
+    const prodId = req.params.id as string as string;
 
     if (!ObjectId.isValid(prodId)) {
       return res.status(400).send({ success: false, message: "Invalid Product ID format" });
@@ -511,7 +511,7 @@ app.get("/api/items/my-items",verifyToken, async (req, res) => {
  */
 app.delete("/api/items/:id",verifyToken, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = req.params.id as string as string as string;
     const query = { _id: new ObjectId(id) }; // মঙ্গোডিবির ওরিজিনাল ObjectId
     
     const result = await productsCollection.deleteOne(query);
