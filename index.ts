@@ -460,6 +460,191 @@ app.delete("/api/admin/products/:id",verifyToken, async (req: any, res: any) => 
   }
 });
 
+
+
+
+
+
+app.post("/api/items",verifyToken, async (req, res) => {
+  try {
+    const itemData = req.body;
+    itemData.status = "approved";
+    
+    // ডেটাবেজে ইনসার্ট করা
+    const result = await productsCollection.insertOne(itemData);
+    
+    res.status(201).send({ 
+      success: true, 
+      message: "Item deployed successfully", 
+      insertedId: result.insertedId 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false, message: "Internal Server Error" });
+  }
+});
+
+/**
+ * 🎯 ২. নির্দিষ্ট সেলারের ইমেইল অনুযায়ী আইটেম গেট করার রাউট (GET /api/items/my-items)
+ */
+app.get("/api/items/my-items",verifyToken, async (req, res) => {
+  try {
+    const email = req.query.email;
+    
+    if (!email) {
+      return res.status(400).send({ success: false, message: "Email query param is required" });
+    }
+
+    // নির্দিষ্ট ইমেলের ডেটা ফিল্টার করা
+    const query = { sellerEmail: email };
+    const myItems = await productsCollection.find(query).toArray();
+    
+    res.send({ success: true, data: myItems });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false, data: [], message: "Internal Server Error" });
+  }
+});
+
+/**
+ * 🎯 ৩. আইডি দিয়ে আইটেম ডিলিট করার রাউট (DELETE /api/items/:id)
+ */
+app.delete("/api/items/:id",verifyToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) }; // মঙ্গোডিবির ওরিজিনাল ObjectId
+    
+    const result = await productsCollection.deleteOne(query);
+    
+    if (result.deletedCount === 1) {
+      res.send({ success: true, message: "Item purged successfully from matrix" });
+    } else {
+      res.status(404).send({ success: false, message: "Item not found" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false, message: "Internal Server Error" });
+  }
+});
+
+app.get("/api/stats/dashboard", async (req, res) => {
+  try {
+    const totalUsers = await usersCollection.countDocuments();
+
+    const totalProducts = await productsCollection.countDocuments();
+
+    const totalSellers = await usersCollection.countDocuments({
+      role: "seller",
+    });
+
+    const totalBuyers = await usersCollection.countDocuments({
+      role: "buyer",
+    });
+
+    const totalManagers = await usersCollection.countDocuments({
+      role: "manager",
+    });
+
+    const totalAdmins = await usersCollection.countDocuments({
+      role: "admin",
+    });
+
+    const pendingProducts = await productsCollection.countDocuments({
+      status: "pending",
+    });
+
+    const approvedProducts = await productsCollection.countDocuments({
+      status: "approved",
+    });
+
+    const suspendedProducts = await productsCollection.countDocuments({
+      status: "suspended",
+    });
+
+    res.send({
+      stats: {
+        totalUsers,
+        totalProducts,
+        totalSellers,
+        pendingProducts,
+      },
+
+      userDistribution: [
+        {
+          name: "Buyers",
+          value: totalBuyers,
+          fill: "#06b6d4",
+        },
+        {
+          name: "Sellers",
+          value: totalSellers,
+          fill: "#3b82f6",
+        },
+        {
+          name: "Managers",
+          value: totalManagers,
+          fill: "#a855f7",
+        },
+        {
+          name: "Admins",
+          value: totalAdmins,
+          fill: "#ef4444",
+        },
+      ],
+
+      productStatus: [
+        {
+          name: "Approved",
+          value: approvedProducts,
+        },
+        {
+          name: "Pending",
+          value: pendingProducts,
+        },
+        {
+          name: "Suspended",
+          value: suspendedProducts,
+        },
+      ],
+
+      growthData: [
+        {
+          month: "Jan",
+          Users: Math.floor(totalUsers * 0.2),
+          Products: Math.floor(totalProducts * 0.2),
+        },
+        {
+          month: "Feb",
+          Users: Math.floor(totalUsers * 0.4),
+          Products: Math.floor(totalProducts * 0.4),
+        },
+        {
+          month: "Mar",
+          Users: Math.floor(totalUsers * 0.6),
+          Products: Math.floor(totalProducts * 0.6),
+        },
+        {
+          month: "Apr",
+          Users: Math.floor(totalUsers * 0.8),
+          Products: Math.floor(totalProducts * 0.8),
+        },
+        {
+          month: "May",
+          Users: totalUsers,
+          Products: totalProducts,
+        },
+      ],
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      success: false,
+      message: "Failed to load dashboard stats",
+    });
+  }
+});
+
 // 🔌 মঙ্গোডিবি কানেকশন ইনিশিয়ালাইজার
 async function run() {
   try {
