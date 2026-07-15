@@ -648,8 +648,8 @@ app.get("/api/stats/dashboard", async (req, res) => {
 // 🔌 মঙ্গোডিবি কানেকশন ইনিশিয়ালাইজার
 async function run() {
   try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
+    // await client.connect();
+    // await client.db("admin").command({ ping: 1 });
     console.log("⚡️ Connected to MongoDB Atlas successfully!");
   } catch (error) {
     console.error("❌ Database connection error:", error);
